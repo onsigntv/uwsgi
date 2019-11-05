@@ -30,12 +30,8 @@
 #define HAS_NO_ERRORS_IN_PyFile_FromFd
 #endif
 
-#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
-#define HAS_NOT_PyOS_AfterFork_Child
-#endif
-
-#if PY_MAJOR_VERSION < 3
-#define HAS_NOT_PyOS_AfterFork_Child
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION > 6
+#define REQUIRES_PyOS_BeforeAndAfterFork_ParentAndChild
 #endif
 
 #if PY_MAJOR_VERSION > 2
@@ -206,6 +202,8 @@ struct uwsgi_python {
 	struct uwsgi_string_list *sharedarea;
 
 	int call_osafterfork;
+
+	PyGILState_STATE fork_state;
 
 	int wsgi_disable_file_wrapper;
 

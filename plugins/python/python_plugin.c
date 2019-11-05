@@ -269,7 +269,12 @@ pep405:
 ready:
 
 	if (!uwsgi.has_threads) {
+#ifdef REQUIRES_PyOS_BeforeAndAfterFork_ParentAndChild
+		uwsgi_log_initial("*** ERROR! Python 3.7 and above need thread support. Enable it with --enable-threads ***\n");
+		exit(1);
+#else
 		uwsgi_log_initial("*** Python threads support is disabled. You can enable it with --enable-threads ***\n");
+#endif
 	}
 
 	up.wsgi_spitout = PyCFunction_New(uwsgi_spit_method, NULL);
@@ -386,20 +391,39 @@ realstuff:
 	Py_Finalize();
 }
 
+void uwsgi_python_pre_fork() {
+#ifdef REQUIRES_PyOS_BeforeAndAfterFork_ParentAndChild
+	up.fork_state = PyGILState_Ensure();
+	PyOS_BeforeFork();
+#endif
+}
+
+void uwsgi_python_post_fork_parent() {
+#ifdef REQUIRES_PyOS_BeforeAndAfterFork_ParentAndChild
+	PyOS_AfterFork_Parent();
+	PyGILState_Release(up.fork_state);
+#endif
+}
+
+void uwsgi_python_post_fork_child() {
+#ifdef REQUIRES_PyOS_BeforeAndAfterFork_ParentAndChild
+	PyOS_AfterFork_Child();
+	PyGILState_Release(up.fork_state);
+#endif
+}
+
 void uwsgi_python_post_fork() {
 
 	if (uwsgi.i_am_a_spooler) {
 		UWSGI_GET_GIL
 	}	
 
+#ifndef REQUIRES_PyOS_BeforeAndAfterFork_ParentAndChild
 	// reset python signal flags so child processes can trap signals
 	if (up.call_osafterfork) {
-#ifdef HAS_NOT_PyOS_AfterFork_Child
 		PyOS_AfterFork();
-#else
-		PyOS_AfterFork_Child();
-#endif
 	}
+#endif
 
 	uwsgi_python_reset_random_seed();
 
@@ -1970,12 +1994,10 @@ static int uwsgi_python_worker() {
 	if (!up.worker_override)
 		return 0;
 	UWSGI_GET_GIL;
+#ifndef REQUIRES_PyOS_BeforeAndAfterFork_ParentAndChild
 	// ensure signals can be used again from python
 	if (!up.call_osafterfork)
-#ifdef HAS_NOT_PyOS_AfterFork_Child
 		PyOS_AfterFork();
-#else
-		PyOS_AfterFork_Child();
 #endif
 	FILE *pyfile = fopen(up.worker_override, "r");
 	if (!pyfile) {
@@ -1991,7 +2013,10 @@ struct uwsgi_plugin python_plugin = {
 	.alias = "python",
 	.modifier1 = 0,
 	.init = uwsgi_python_init,
+	.pre_fork = uwsgi_python_pre_fork,
 	.post_fork = uwsgi_python_post_fork,
+	.post_fork_child = uwsgi_python_post_fork_child,
+	.post_fork_parent = uwsgi_python_post_fork_parent,
 	.options = uwsgi_python_options,
 	.request = uwsgi_request_wsgi,
 	.after_request = uwsgi_after_request_wsgi,

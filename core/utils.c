@@ -3143,10 +3143,22 @@ void uwsgi_set_processname(char *name) {
 
 // this is a wrapper for fork restoring original argv
 pid_t uwsgi_fork(char *name) {
+	int i = 0;
 
+	for (i = 0; i < 256; i++) {
+		if (uwsgi.p[i]->pre_fork) {
+			uwsgi.p[i]->pre_fork();
+		}
+	}
 
 	pid_t pid = fork();
 	if (pid == 0) {
+
+		for (i = 0; i < 256; i++) {
+			if (uwsgi.p[i]->post_fork_child) {
+				uwsgi.p[i]->post_fork_child();
+			}
+		}
 
 #ifndef __CYGWIN__
 		if (uwsgi.never_swap) {
@@ -3157,7 +3169,6 @@ pid_t uwsgi_fork(char *name) {
 #endif
 
 #if defined(__linux__) || defined(__sun__)
-		int i;
 		for (i = 0; i < uwsgi.argc; i++) {
 			// stop fixing original argv if the new one is bigger
 			if (!uwsgi.orig_argv[i]) break;
@@ -3171,6 +3182,12 @@ pid_t uwsgi_fork(char *name) {
 			}
 			else {
 				uwsgi_set_processname(name);
+			}
+		}
+	} else if (pid > 0) {
+		for (i = 0; i < 256; i++) {
+			if (uwsgi.p[i]->post_fork_parent) {
+				uwsgi.p[i]->post_fork_parent();
 			}
 		}
 	}
