@@ -1,6 +1,6 @@
 # uWSGI build system
 
-uwsgi_version = '2.0.18-forking-fix'
+uwsgi_version = '2.0.18-onsigntv.2'
 
 import os
 import re
