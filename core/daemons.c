@@ -235,13 +235,17 @@ void uwsgi_detach_daemons() {
 			// try to stop daemon gracefully, kill it if it won't die
 			// if mercy is not set then wait up to 3 seconds
 			time_t timeout = uwsgi_now() + (uwsgi.reload_mercy ? uwsgi.reload_mercy : 3);
+			int has_been_signalled = 0;
 			int waitpid_status;
 			while (!kill(ud->pid, 0)) {
-				if (uwsgi_instance_is_reloading && ud->reload_signal > 0) {
-					kill(-(ud->pid), ud->reload_signal);
-				}
-				else {
-					kill(-(ud->pid), ud->stop_signal);
+				if (!has_been_signalled) {
+					if (uwsgi_instance_is_reloading && ud->reload_signal > 0) {
+						kill(-(ud->pid), ud->reload_signal);
+					}
+					else {
+						kill(-(ud->pid), ud->stop_signal);
+					}
+					has_been_signalled = 1;
 				}
 				sleep(1);
 				waitpid(ud->pid, &waitpid_status, WNOHANG);
