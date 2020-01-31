@@ -263,8 +263,8 @@ void uwsgi_detach_daemons() {
 		if (ud->notifypid && ud->pid > 0 && ud->pidfile) {
 			if (uwsgi_instance_is_reloading) {
 				int signum = ud->reload_signal > 0 ? ud->reload_signal : SIGHUP;
-				if (kill(ud->pid, reload_signal) < 0) {
-					uwsgi_log("[uwsgi-daemons] error notifying daemon of reload (pid: %d) (pidfile: %s) (signal: %d) errno: %d\n", (int) ud->pid, ud->pidfile, reload_signal, errno);
+				if (kill(ud->pid, signum) < 0) {
+					uwsgi_log("[uwsgi-daemons] error notifying daemon of reload (pid: %d) (pidfile: %s) (signal: %d) errno: %d\n", (int) ud->pid, ud->pidfile, signum, errno);
 				}
 			}
 			else {
