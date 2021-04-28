@@ -271,6 +271,7 @@ static struct uwsgi_option uwsgi_base_options[] = {
 	{"print-sym", required_argument, 0, "print content of the specified binary symbol", uwsgi_print_sym, NULL, UWSGI_OPT_IMMEDIATE},
 	{"print-symbol", required_argument, 0, "print content of the specified binary symbol", uwsgi_print_sym, NULL, UWSGI_OPT_IMMEDIATE},
 
+	{"auto-reload-guard", required_argument, 0, "prevent max-requests and max-worker-lifetime reloads if the given file exists", uwsgi_opt_set_str, &uwsgi.auto_reload_guard, 0},
 	{"reaper", no_argument, 'r', "call waitpid(-1,...) after each request to get rid of zombies", uwsgi_opt_true, &uwsgi.reaper, 0},
 	{"max-requests", required_argument, 'R', "reload workers after the specified amount of managed requests", uwsgi_opt_set_64bit, &uwsgi.max_requests, 0},
 	{"min-worker-lifetime", required_argument, 0, "number of seconds worker must run before being reloaded (default is 60)", uwsgi_opt_set_64bit, &uwsgi.min_worker_lifetime, 0},

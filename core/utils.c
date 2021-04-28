@@ -1198,17 +1198,19 @@ void uwsgi_close_request(struct wsgi_request *wsgi_req) {
 	// yes, this is pretty useless but we cannot ensure all of the plugin have the same behaviour
 	uwsgi.workers[uwsgi.mywid].cores[wsgi_req->async_id].in_request = 0;
 
-	if (uwsgi.max_requests > 0 && uwsgi.workers[uwsgi.mywid].delta_requests >= uwsgi.max_requests
-	    && (end_of_request - (uwsgi.workers[uwsgi.mywid].last_spawn * 1000000) >= uwsgi.min_worker_lifetime * 1000000)) {
-		goodbye_cruel_world();
-	}
+	if (!(uwsgi.auto_reload_guard && uwsgi_file_exists(uwsgi.auto_reload_guard))) {
+		if (uwsgi.max_requests > 0 && uwsgi.workers[uwsgi.mywid].delta_requests >= uwsgi.max_requests
+			&& (end_of_request - (uwsgi.workers[uwsgi.mywid].last_spawn * 1000000) >= uwsgi.min_worker_lifetime * 1000000)) {
+				goodbye_cruel_world();
+		}
 
-	if (uwsgi.reload_on_as && (rlim_t) vsz >= uwsgi.reload_on_as && (end_of_request - (uwsgi.workers[uwsgi.mywid].last_spawn * 1000000) >= uwsgi.min_worker_lifetime * 1000000)) {
-		goodbye_cruel_world();
-	}
+		if (uwsgi.reload_on_as && (rlim_t) vsz >= uwsgi.reload_on_as && (end_of_request - (uwsgi.workers[uwsgi.mywid].last_spawn * 1000000) >= uwsgi.min_worker_lifetime * 1000000)) {
+			goodbye_cruel_world();
+		}
 
-	if (uwsgi.reload_on_rss && (rlim_t) rss >= uwsgi.reload_on_rss && (end_of_request - (uwsgi.workers[uwsgi.mywid].last_spawn * 1000000) >= uwsgi.min_worker_lifetime * 1000000)) {
-		goodbye_cruel_world();
+		if (uwsgi.reload_on_rss && (rlim_t) rss >= uwsgi.reload_on_rss && (end_of_request - (uwsgi.workers[uwsgi.mywid].last_spawn * 1000000) >= uwsgi.min_worker_lifetime * 1000000)) {
+			goodbye_cruel_world();
+		}
 	}
 
 
