@@ -2396,6 +2396,8 @@ struct uwsgi_server {
 
 	struct uwsgi_string_list *mountpoints_check;
 
+	char *auto_reload_guard;
+
 	int propagate_touch;
 
 	// enable grunt mode
