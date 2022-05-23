@@ -86,7 +86,7 @@ void uwsgi_mule(int id) {
 	else if (pid > 0) {
 		uwsgi.mules[id - 1].id = id;
 		uwsgi.mules[id - 1].pid = pid;
-		uwsgi_log("spawned uWSGI mule %d (pid: %d)\n", id, (int) pid);
+		uwsgi_log("spawned uWSGI mule %d: (brain: \"%s\", pid: %d)\n", id, uwsgi.mules[id - 1].patch, (int)pid);
 	}
 }
 
