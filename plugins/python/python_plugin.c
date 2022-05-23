@@ -1862,11 +1862,37 @@ void uwsgi_python_hijack(void) {
 
 int uwsgi_python_mule(char *opt) {
 
-	if (uwsgi_endswith(opt, ".py")) {
+	int retcode = 0;
+	size_t opt_argc = 0;
+	char **opt_argv = uwsgi_split_quoted(opt, strlen(opt), " ", &opt_argc);
+
+	if (opt_argc > 0 && uwsgi_endswith(opt_argv[0], ".py")) {
 		UWSGI_GET_GIL;
-		uwsgi_pyimport_by_filename("__main__", opt);
+		PyObject *av = PyList_New(opt_argc);
+		if (av != NULL) {
+			size_t i;
+			for (i = 0; i < opt_argc; i++) {
+				PyObject *v = UWSGI_PYFROMSTRING(opt_argv[i]);
+				if (v == NULL) {
+					Py_DECREF(av);
+					av = NULL;
+					break;
+				}
+				PyList_SET_ITEM(av, i, v);
+			}
+		}
+		if (av == NULL) {
+			uwsgi_fatal_error("no mem for sys.argv");
+		}
+		if (PySys_SetObject("argv", av) != 0) {
+			Py_DECREF(av);
+			uwsgi_fatal_error("can't assign sys.argv");
+		}
+		Py_DECREF(av);
+
+		uwsgi_pyimport_by_filename("__main__", opt_argv[0]);
 		UWSGI_RELEASE_GIL;
-		return 1;
+		retcode = 1;
 	}
 	else if (strchr(opt, ':')) {
 		UWSGI_GET_GIL;
@@ -1880,10 +1906,11 @@ int uwsgi_python_mule(char *opt) {
 		Py_XDECREF(arglist);
 		Py_XDECREF(callable);
 		UWSGI_RELEASE_GIL;
-		return 1;
+		retcode = 1;
 	}
-	return 0;
-	
+
+	if (opt_argv) free(opt_argv);
+	return retcode;
 }
 
 int uwsgi_python_mule_msg(char *message, size_t len) {
