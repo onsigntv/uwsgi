@@ -1,6 +1,6 @@
 # uWSGI build system
 
-uwsgi_version = '2.0.30'
+uwsgi_version = '2.0.30+onsign.1'
 
 import os
 import re
@@ -1191,7 +1191,7 @@ class uConf(object):
 
         self.cflags.append('-DUWSGI_VERSION="\\"' + uwsgi_version + '\\""')
 
-        uver_whole = uwsgi_version.split('-', 1)
+        uver_whole = uwsgi_version.split('+', 1)
         if len(uver_whole) == 1:
             uver_custom = ''
         else:
