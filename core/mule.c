@@ -36,6 +36,12 @@ void uwsgi_mule(int id) {
 
 	int i;
 
+	for (i = 0; i < 256; i++) {
+		if (uwsgi.p[i]->pre_uwsgi_fork) {
+			uwsgi.p[i]->pre_uwsgi_fork();
+		}
+	}
+
 	pid_t pid = uwsgi_fork(uwsgi.mules[id - 1].name);
 	if (pid == 0) {
 #ifdef __linux__
@@ -44,6 +50,11 @@ void uwsgi_mule(int id) {
 		}
 #endif
 
+		for (i = 0; i < 256; i++) {
+			if (uwsgi.p[i]->post_uwsgi_fork) {
+				uwsgi.p[i]->post_uwsgi_fork(1);
+			}
+		}
 		signal(SIGALRM, SIG_IGN);
                 signal(SIGHUP, end_me);
                 signal(SIGINT, end_me);
@@ -84,6 +95,11 @@ void uwsgi_mule(int id) {
 
 	}
 	else if (pid > 0) {
+		for (i = 0; i < 256; i++) {
+			if (uwsgi.p[i]->post_uwsgi_fork) {
+				uwsgi.p[i]->post_uwsgi_fork(0);
+			}
+		}
 		uwsgi.mules[id - 1].id = id;
 		uwsgi.mules[id - 1].pid = pid;
 		uwsgi_log("spawned uWSGI mule %d: (brain: \"%s\", pid: %d)\n", id, uwsgi.mules[id - 1].patch, (int)pid);
