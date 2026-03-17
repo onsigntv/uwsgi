@@ -3920,6 +3920,7 @@ void uwsgi_opt_set_immediate_uid(char *, char *, void *);
 void uwsgi_opt_set_immediate_gid(char *, char *, void *);
 void uwsgi_opt_set_env(char *, char *, void *);
 void uwsgi_opt_unset_env(char *, char *, void *);
+void uwsgi_opt_load_dotenv(char *, char *, void *);
 void uwsgi_opt_pidfile_signal(char *, char *, void *);
 
 void uwsgi_opt_check_static(char *, char *, void *);

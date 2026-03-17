@@ -4427,6 +4427,118 @@ void uwsgi_opt_envdir(char *opt, char *value, void *foobar) {
 	uwsgi_envdir(value);
 }
 
+void uwsgi_opt_load_dotenv(char *opt, char *path, void *foobar) {
+	FILE *f = fopen(path, "r");
+	if (!f) {
+		uwsgi_log("[uwsgi-dotenv] unable to open %s\n", path);
+		uwsgi_error_open(path);
+		exit(1);
+	}
+
+	char line[131072];
+	int lineno = 0;
+
+	while (fgets(line, sizeof(line), f)) {
+		lineno++;
+
+		/* strip trailing newline/carriage-return */
+		size_t len = strlen(line);
+		while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r'))
+			line[--len] = '\0';
+
+		/* skip leading whitespace */
+		char *p = line;
+		while (*p == ' ' || *p == '\t') p++;
+
+		/* skip blank lines and comments */
+		if (*p == '\0' || *p == '#')
+			continue;
+
+		/* optional "export " prefix */
+		if (strncmp(p, "export ", 7) == 0) {
+			p += 7;
+			while (*p == ' ' || *p == '\t') p++;
+		}
+
+		/* find '=' separator */
+		char *eq = strchr(p, '=');
+		if (!eq) {
+			uwsgi_log("[uwsgi-dotenv] %s:%d: skipping invalid line (no '=')\n", path, lineno);
+			continue;
+		}
+
+		/* extract key */
+		size_t keylen = eq - p;
+		/* trim trailing whitespace from key */
+		while (keylen > 0 && (p[keylen-1] == ' ' || p[keylen-1] == '\t'))
+			keylen--;
+
+		if (keylen == 0) {
+			uwsgi_log("[uwsgi-dotenv] %s:%d: skipping line with empty key\n", path, lineno);
+			continue;
+		}
+
+		char *key = uwsgi_strncopy(p, keylen);
+
+		/* extract value */
+		char *val = eq + 1;
+		while (*val == ' ' || *val == '\t') val++;
+
+		char *value_copy;
+
+		if (*val == '"' || *val == '\'') {
+			/* quoted value: strip surrounding quotes, unescape backslash-escaped quotes */
+			char quote = *val;
+			val++;
+			/* build unescaped value into a temporary buffer */
+			char *buf = uwsgi_str(val);  /* at most as long as the rest of the line */
+			size_t blen = 0;
+			char *src = val;
+			int closed = 0;
+			while (*src) {
+				if (*src == '\\' && *(src+1) == quote) {
+					buf[blen++] = quote;
+					src += 2;
+				} else if (*src == quote) {
+					closed = 1;
+					break;
+				} else {
+					buf[blen++] = *src++;
+				}
+			}
+			buf[blen] = '\0';
+			if (!closed) {
+				uwsgi_log("[uwsgi-dotenv] %s:%d: warning: unterminated quoted value\n", path, lineno);
+			}
+			value_copy = buf;
+		} else {
+			/* unquoted value: strip inline comment (must be preceded by a space) */
+			char *end = val;
+			while (*end != '\0') {
+				if (*end == '#' && end > val && (*(end-1) == ' ' || *(end-1) == '\t')) break;
+				end++;
+			}
+			/* trim trailing whitespace */
+			while (end > val && (*(end-1) == ' ' || *(end-1) == '\t')) end--;
+			value_copy = uwsgi_strncopy(val, end - val);
+		}
+
+		if (setenv(key, value_copy, 1)) {
+			uwsgi_log("[uwsgi-dotenv] unable to set %s\n", key);
+			uwsgi_error("[uwsgi-dotenv] setenv");
+			free(key);
+			free(value_copy);
+			fclose(f);
+			exit(1);
+		}
+
+		free(key);
+		free(value_copy);
+	}
+
+	fclose(f);
+}
+
 void uwsgi_exit(int status) {
 	uwsgi.last_exit_code = status;
 	// disable macro expansion
